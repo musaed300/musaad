@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Attach" type="PythonDapAttachConfiguration" singleton="false" nameIsGenerated="true">
+    <pathMappings>
+      <mapping local="$PROJECT_DIR$" remote="." />
+    </pathMappings>
+    <option name="remoteRoot" />
+    <method v="2" />
+  </configuration>
+</component>
