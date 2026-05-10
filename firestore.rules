@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Phase 2 & 4: Collection Rules
+    
+    // Tasks Collection
+    match /tasks/{taskId} {
+      function isValidTask(data) {
+        return data.userId is string && data.userId == request.auth.uid &&
+               data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+               data.priority is int && data.priority >= 1 && data.priority <= 5 &&
+               data.energyLevel is int && data.energyLevel >= 1 && data.energyLevel <= 5 &&
+               data.durationMin is int && data.durationMin >= 0 &&
+               data.status is string && data.status in ['pending', 'in_progress', 'completed', 'skipped'] &&
+               data.category is string && data.category.size() <= 50 &&
+               data.sortOrder is int &&
+               data.uiProperties is map &&
+               data.uiProperties.bubbleColor is string &&
+               data.uiProperties.positionX is number &&
+               data.uiProperties.positionY is number;
+      }
+
+      allow get: if isSignedIn() && isValidId(taskId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && 
+                      isValidId(taskId) && 
+                      isValidTask(incoming()) && 
+                      incoming().createdAt == request.time &&
+                      incoming().keys().hasAll(['userId', 'title', 'priority', 'energyLevel', 'durationMin', 'status', 'category', 'createdAt', 'uiProperties', 'sortOrder']) &&
+                      incoming().keys().size() == 10;
+
+      allow update: if isSignedIn() && 
+                      isValidId(taskId) && 
+                      existing().userId == request.auth.uid &&
+                      isValidTask(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().createdAt == existing().createdAt &&
+                      (
+                        // Action: Complete
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'completedAt'])) ||
+                        // Action: Edit metadata
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'priority', 'energyLevel', 'durationMin', 'category', 'uiProperties'])) ||
+                        // Action: Reschedule
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['sortOrder'])) ||
+                        // Action: Move status
+                        (incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+                      );
+      
+      allow delete: if isSignedIn() && isValidId(taskId) && existing().userId == request.auth.uid;
+    }
+
+    // Analytics Collection
+    match /analytics/{analyticsId} {
+      function isValidAnalytics(data) {
+        return data.userId is string && data.userId == request.auth.uid &&
+               data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$") &&
+               data.tasksCompleted is int &&
+               data.totalEnergyExpended is int &&
+               data.focusScore is int;
+      }
+
+      allow get: if isSignedIn() && isValidId(analyticsId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && 
+                      isValidId(analyticsId) && 
+                      isValidAnalytics(incoming()) &&
+                      incoming().keys().hasAll(['userId', 'date', 'tasksCompleted', 'totalEnergyExpended', 'focusScore']) &&
+                      incoming().keys().size() == 5;
+
+      allow update: if isSignedIn() && 
+                      isValidId(analyticsId) && 
+                      existing().userId == request.auth.uid &&
+                      isValidAnalytics(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().date == existing().date &&
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['tasksCompleted', 'totalEnergyExpended', 'focusScore']));
+
+      allow delete: if isSignedIn() && isValidId(analyticsId) && existing().userId == request.auth.uid;
+    }
+
+    // Connection check
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A daily task with priority, energy level, and duration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "energyLevel": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "durationMin": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "skipped"] },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "sortOrder": { "type": "integer" },
+        "uiProperties": {
+          "type": "object",
+          "properties": {
+            "bubbleColor": { "type": "string" },
+            "positionX": { "type": "number" },
+            "positionY": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userId", "title", "priority", "energyLevel", "durationMin", "status"]
+    },
+    "UserAnalytics": {
+      "title": "User Analytics",
+      "description": "Daily productivity statistics for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "tasksCompleted": { "type": "integer" },
+        "totalEnergyExpended": { "type": "integer" },
+        "focusScore": { "type": "integer" }
+      },
+      "required": ["userId", "date"]
+    }
+  },
+  "firestore": {
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User tasks"
+    },
+    "/analytics/{analyticsId}": {
+      "schema": "UserAnalytics",
+      "description": "Daily analytics"
+    }
+  }
+}
