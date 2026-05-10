@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Chronos Flow",
+  "description": "Smart daily task organizer that uses AI to optimize your schedule based on energy levels and productivity insights.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
